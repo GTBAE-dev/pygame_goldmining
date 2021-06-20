@@ -25,34 +25,78 @@ def setup_gemstones(): # 보석 배치 및 인자(가격, 속도) 설정 함수
     height_of_small_gold = gemstone_images[0].get_rect()[3]
     for i in range(0, num_of_small_golds):
         # center_of_small_golds.append((randrange(width_of_small_gold, screen_width - width_of_small_gold), randrange(200, screen_height - height_of_small_gold)))
-        gemstone_group.add(Gemstone(gemstone_images[0], (randrange(width_of_small_gold, screen_width - width_of_small_gold), randrange(200, screen_height - height_of_small_gold)), small_gold_price, small_gold_speed))
+        gemstone_group.add(Gemstone(gemstone_images[0], (randrange(width_of_small_gold + i*(screen_width / num_of_small_golds), (i + 1)*(screen_width / num_of_small_golds) - width_of_small_gold), randrange(200, screen_height - height_of_small_gold)), small_gold_price, small_gold_speed))
         
     num_of_big_golds = level + 1
     width_of_big_gold = gemstone_images[1].get_rect()[2]
     height_of_big_gold = gemstone_images[1].get_rect()[3]
     for i in range(0, num_of_big_golds):
         # center_of_big_golds.append((randrange(width_of_big_gold, screen_width - width_of_big_gold), randrange(200, screen_height - height_of_big_gold)))
-        gemstone_group.add(Gemstone(gemstone_images[1], (randrange(width_of_big_gold, screen_width - width_of_big_gold), randrange(200, screen_height - height_of_big_gold)), big_gold_price, big_gold_speed))
+        gemstone_group.add(Gemstone(gemstone_images[1], (randrange(width_of_big_gold + i*(screen_width / num_of_big_golds), (i + 1)*(screen_width / num_of_big_golds) - width_of_big_gold), randrange(200, screen_height - height_of_big_gold)), big_gold_price, big_gold_speed))
 
     num_of_stones = level + 1
     width_of_stone = gemstone_images[2].get_rect()[2]
     height_of_stone = gemstone_images[2].get_rect()[3]
     for i in range(0, num_of_stones):
         # center_of_stones.append((randrange(width_of_stone, screen_width - width_of_stone), randrange(200, screen_height - height_of_stone)))    
-        gemstone_group.add(Gemstone(gemstone_images[2], (randrange(width_of_stone, screen_width - width_of_stone), randrange(200, screen_height - height_of_stone)), stone_price, stone_speed))
+        gemstone_group.add(Gemstone(gemstone_images[2], (randrange(width_of_stone + i*(screen_width / num_of_stones), (i + 1)*(screen_width / num_of_stones) - width_of_stone), randrange(200, screen_height - height_of_stone)), stone_price, stone_speed))
 
     num_of_diamonds = (level // 2) + 1
     width_of_diamond = gemstone_images[3].get_rect()[2]
     height_of_diamond = gemstone_images[3].get_rect()[3]
     for i in range(0, num_of_diamonds):
         # center_of_diamonds.append((randrange(width_of_diamond, screen_width - width_of_diamond), randrange(200, screen_height - height_of_diamond)))
-        gemstone_group.add(Gemstone(gemstone_images[3], (randrange(width_of_diamond, screen_width - width_of_diamond), randrange(200, screen_height - height_of_diamond)), diamond_price, diamond_speed))
+        gemstone_group.add(Gemstone(gemstone_images[3], (randrange(width_of_diamond + i*(screen_width / num_of_diamonds), (i + 1)*(screen_width / num_of_diamonds) - width_of_diamond), randrange(200, screen_height - height_of_diamond)), diamond_price, diamond_speed))
     
-def check_setup_gemstone(): # 겹치는 보석 재생성 함수
+def check_setup_gemstone(): # 겹치는 보석 재생성 함수 일단 스킵
     for gemstone in gemstone_group:
-        if pygame.sprite.collide_mask(gemstone, gemstone):
-            gemstone_group.remove(gemstone)
-            gemstone_group.add(gemstone)
+            pygame.sprite.spritecollide(gemstone, gemstone_group, False)
+
+class Claw(pygame.sprite.Sprite): # 집게 클래스
+    def __init__(self, image, position):
+        super().__init__()
+        self.image = image # 집게 회전 시 이미지 업데이트
+        self.original_image = image # 초기의 이미지 보관
+        self.rect = image.get_rect(center = position)
+
+        self.offset = pygame.math.Vector2(default_offset_x_claw, 0) # 해당 좌표만큼 이미지 이동 변수, Vector2는 rotate 함수 지원(각도 넣으면 좌표 자동 계산)
+        self.position = position
+
+        self.direction = LEFT # 집게 이동 방향
+        self.angle_speed = 2.5 # 집게 각속도(프레임당)
+        self.angle = 10 # 최초 각동 정의
+    
+    def update(self, to_x):
+        if self.direction == LEFT: # 방향별 집게 이동 처리
+            self.angle += self.angle_speed
+        elif self.direction == RIGHT:
+            self.angle -= self.angle_speed
+        if self.angle > 170:
+            self.angle = 170
+            self.direction = RIGHT
+        elif self.angle < 10:
+            self.angle = 10
+            self.direction = LEFT
+        
+        self.offset.x += to_x # offset의 x좌표를 이동시킬 to_x만큼 업데이트
+
+        self.rotate()
+    
+    def rotate(self): # 집게 이미지 회전 함수
+        self.image = pygame.transform.rotozoom(self.original_image, -self.angle, 1) # 회전할 원본 이미지, 회전 각도와 방향, 이미지 크기
+        offset_rotated = self.offset.rotate(self.angle) # offset 회전된 값을 받는 변수, rect값에 적용 위함
+        self.rect = self.image.get_rect(center = self.position + offset_rotated) # self.image가 회전 된 이미지를 가져왔으니, claw rect정보를 새롭게 만들어진 이미지로부터 중심점 업뎃   
+        # 이미지 회전 시 rect의 left, top은 고정, height, width 변경됨, 이 변경 된 height, width의 rect정보를 업데이트 해줘야 중심이 맞음
+    
+    def set_init_state(self): # 집게 원위치 후 재회전 처리 함수
+        self.offset.x = default_offset_x_claw
+        self.angle = 10
+        self.direction = LEFT
+    
+    def draw(self, screen): # 
+        screen.blit(self.image, self.rect)
+        pygame.draw.line(screen, BLACK, self.position, self.rect.center, 5) # position ~ rect 중심까지 잇는 선
+
 
 def setup_level(): # 레벨 및 레벨 당 타겟 점수 설정 함수
     global level, current_score, target_score, game_result, total_time
@@ -114,6 +158,15 @@ game_result = None
 BLACK = (0, 0, 0)
 WHITE = (255, 255, 255)
 
+default_offset_x_claw = 40
+to_x = 0
+move_speed = 12
+return_speed = 20
+caught_gemstone = None
+LEFT = -1
+RIGHT = +1
+STOP = 0
+
 ''' 2-1. 배경 '''
 current_path = os.path.dirname(__file__) # 현재 파일 위치 반환 변수
 background = pygame.image.load(os.path.join(current_path, "background.png"))
@@ -128,6 +181,9 @@ gemstone_images = [ # 이미지 불러오기
 gemstone_group = pygame.sprite.Group() # Group 정의: sprite 관리 편하게 하기 위함
 setup_gemstones()
 check_setup_gemstone()
+
+claw_image = pygame.image.load(os.path.join(current_path, "claw.png")).convert_alpha() # 집게 이미지 불러오기, 투명한 부분 무시하는 함수 alpha
+claw = Claw(claw_image, (screen_width // 2, 110))
 
 
 ''' 3. 메인루프(메인 이벤트 처리) '''
@@ -147,6 +203,9 @@ while running:
     
     gemstone_group.draw(screen) # 스크린 내 보석 표시
     
+    claw.update(to_x)
+    claw.draw(screen)
+
     setup_level()
 
     display_level()
