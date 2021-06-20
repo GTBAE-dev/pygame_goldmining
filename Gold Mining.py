@@ -1,5 +1,6 @@
 import pygame
 import os
+import math
 from random import*
 
 pygame.init()
@@ -11,6 +12,14 @@ class Gemstone(pygame.sprite.Sprite): # 보석 생성 클래스
         self.rect = image.get_rect(center = position)
         self.price = price
         self.speed = speed
+    
+    def set_position(self, position, angle): # 집게로 잡은 물체 위치 조정 함수
+        r = self.rect.size[0] // 2
+        rad_angle = math.radians(angle)
+        to_x = r * math.cos(rad_angle)
+        to_y = r * math.sin(rad_angle)
+        self.rect.center = (position[0] + to_x, position[1] + to_y)
+
 
 def setup_gemstones(): # 보석 배치 및 인자(가격, 속도) 설정 함수
     global level, gemstone_images, center_of_small_golds, center_of_big_golds, center_of_stones, center_of_diamonds
@@ -25,28 +34,28 @@ def setup_gemstones(): # 보석 배치 및 인자(가격, 속도) 설정 함수
     height_of_small_gold = gemstone_images[0].get_rect()[3]
     for i in range(0, num_of_small_golds):
         # center_of_small_golds.append((randrange(width_of_small_gold, screen_width - width_of_small_gold), randrange(200, screen_height - height_of_small_gold)))
-        gemstone_group.add(Gemstone(gemstone_images[0], (randrange(width_of_small_gold + i*(screen_width / num_of_small_golds), (i + 1)*(screen_width / num_of_small_golds) - width_of_small_gold), randrange(200, screen_height - height_of_small_gold)), small_gold_price, small_gold_speed))
+        gemstone_group.add(Gemstone(gemstone_images[0], (randint(int(width_of_small_gold + i*(screen_width / num_of_small_golds)), int((i + 1)*(screen_width / num_of_small_golds) - width_of_small_gold)), randint(200, screen_height - height_of_small_gold)), small_gold_price, small_gold_speed))
         
     num_of_big_golds = level + 1
     width_of_big_gold = gemstone_images[1].get_rect()[2]
     height_of_big_gold = gemstone_images[1].get_rect()[3]
     for i in range(0, num_of_big_golds):
         # center_of_big_golds.append((randrange(width_of_big_gold, screen_width - width_of_big_gold), randrange(200, screen_height - height_of_big_gold)))
-        gemstone_group.add(Gemstone(gemstone_images[1], (randrange(width_of_big_gold + i*(screen_width / num_of_big_golds), (i + 1)*(screen_width / num_of_big_golds) - width_of_big_gold), randrange(200, screen_height - height_of_big_gold)), big_gold_price, big_gold_speed))
+        gemstone_group.add(Gemstone(gemstone_images[1], (randint(int(width_of_big_gold + i*(screen_width / num_of_big_golds)), int((i + 1)*(screen_width / num_of_big_golds) - width_of_big_gold)), randint(200, screen_height - height_of_big_gold)), big_gold_price, big_gold_speed))
 
     num_of_stones = level + 1
     width_of_stone = gemstone_images[2].get_rect()[2]
     height_of_stone = gemstone_images[2].get_rect()[3]
     for i in range(0, num_of_stones):
         # center_of_stones.append((randrange(width_of_stone, screen_width - width_of_stone), randrange(200, screen_height - height_of_stone)))    
-        gemstone_group.add(Gemstone(gemstone_images[2], (randrange(width_of_stone + i*(screen_width / num_of_stones), (i + 1)*(screen_width / num_of_stones) - width_of_stone), randrange(200, screen_height - height_of_stone)), stone_price, stone_speed))
+        gemstone_group.add(Gemstone(gemstone_images[2], (randint(int(width_of_stone + i*(screen_width / num_of_stones)), int((i + 1)*(screen_width / num_of_stones) - width_of_stone)), randint(200, screen_height - height_of_stone)), stone_price, stone_speed))
 
     num_of_diamonds = (level // 2) + 1
     width_of_diamond = gemstone_images[3].get_rect()[2]
     height_of_diamond = gemstone_images[3].get_rect()[3]
     for i in range(0, num_of_diamonds):
         # center_of_diamonds.append((randrange(width_of_diamond, screen_width - width_of_diamond), randrange(200, screen_height - height_of_diamond)))
-        gemstone_group.add(Gemstone(gemstone_images[3], (randrange(width_of_diamond + i*(screen_width / num_of_diamonds), (i + 1)*(screen_width / num_of_diamonds) - width_of_diamond), randrange(200, screen_height - height_of_diamond)), diamond_price, diamond_speed))
+        gemstone_group.add(Gemstone(gemstone_images[3], (randint(int(width_of_diamond + i*(screen_width / num_of_diamonds)), int((i + 1)*(screen_width / num_of_diamonds) - width_of_diamond)), randint(200, screen_height - height_of_diamond)), diamond_price, diamond_speed))
     
 def check_setup_gemstone(): # 겹치는 보석 재생성 함수 일단 스킵
     for gemstone in gemstone_group:
@@ -98,8 +107,12 @@ class Claw(pygame.sprite.Sprite): # 집게 클래스
         pygame.draw.line(screen, BLACK, self.position, self.rect.center, 5) # position ~ rect 중심까지 잇는 선
 
 
+def update_score(score):
+    global current_score
+    current_score += score
+
 def setup_level(): # 레벨 및 레벨 당 타겟 점수 설정 함수
-    global level, current_score, target_score, game_result, total_time
+    global level, current_score, target_score, game_result, total_time, elapsed_time
     if current_score >= target_score:
         screen.fill(BLACK)
         game_result = "Mission Complete"
@@ -108,11 +121,18 @@ def setup_level(): # 레벨 및 레벨 당 타겟 점수 설정 함수
         screen.blit(txt_game_result, rect_game_result)
         level += 1
         target_score = target_score + (level - 1) * 500
-        total_time = 60
+        current_score = 0
+        plus_time = 60 - (total_time - elapsed_time)
+        total_time = int(total_time + plus_time)
+        setup_gemstones()
 
 def display_level(): # 레벨 표시 함수
     txt_level = game_font.render(f"Level {level}", True, BLACK)
     screen.blit(txt_level, (30, 10))
+    txt_curr_score = game_font.render(f"Current Score: {current_score}", True, BLACK)
+    screen.blit(txt_curr_score, (30, 40))
+    txt_target_score = game_font.render(f"Target Score: {target_score:,}", True, BLACK)
+    screen.blit(txt_target_score, (30, 70))
 
 def setup_time_over(time): # 타임오버 처리 함수
     global game_result, running
@@ -150,7 +170,7 @@ level = 1
 current_score = 0
 target_score = 1000
 
-total_time = 3
+total_time = 60
 start_ticks = pygame.time.get_ticks()
 
 game_result = None
@@ -196,8 +216,29 @@ while running:
     for event in pygame.event.get():
         if event.type == pygame.QUIT:
             running = False
+        if event.type == pygame.MOUSEBUTTONDOWN:
+            claw.direction = STOP
+            to_x = move_speed
+    
     ''' 3-3. 게임 내 요소 위치 정의 '''
+    if claw.rect.left < 0 or claw.rect.right > screen_width or claw.rect.bottom > screen_height:
+        to_x = -return_speed # 집게 벽에 닿았을 때 귀환 처리
+    if claw.offset.x < default_offset_x_claw:
+        to_x = 0
+        claw.set_init_state() # 원위치 귀환 시 초기화 처리
+        if caught_gemstone: # 잡은 보석이 있다면 점수화 처리
+            update_score(caught_gemstone.price)
+            gemstone_group.remove(caught_gemstone)
+            caught_gemstone = None
     ''' 3-4. 충돌처리 '''
+    if not caught_gemstone: # 빈 집게 충돌 처리
+        for gemstone in gemstone_group:
+            if pygame.sprite.collide_mask(claw, gemstone): # 여백을 제외한 실제 이미지 출돌처리 함수
+                caught_gemstone = gemstone
+                to_x = -gemstone.speed
+                break
+    if caught_gemstone:
+        caught_gemstone.set_position(claw.rect.center, claw.angle)
     ''' 3-5. 화면에 그리기 '''
     screen.blit(background, (0, 0)) # 배경화면 스크린 내 표시
     
